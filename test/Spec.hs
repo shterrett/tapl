@@ -1,2 +1,6 @@
+import Control.Monad (void)
+import Arithmetic.InterpreterSpec (tests)
+import Test.HUnit (runTestTT)
+
 main :: IO ()
-main = putStrLn "Test suite not yet implemented"
+main = void $ runTestTT tests
