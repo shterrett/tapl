@@ -8,7 +8,7 @@ import qualified Data.Text as T
 import Test.HUnit (Test(..), assertEqual, assertFailure)
 
 tests :: Test
-tests = TestList
+tests = TestLabel "untyped arithmetic" $ TestList
     [ TestLabel "values" $ TestCase evalValues
     , TestLabel "illegal terms" $ TestCase illegalTerms
     , TestLabel "reduces if" $ TestCase ifTerms

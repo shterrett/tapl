@@ -1,6 +1,10 @@
 import Control.Monad (void)
-import Arithmetic.InterpreterSpec (tests)
-import Test.HUnit (runTestTT)
+import qualified Arithmetic.InterpreterSpec as Arith
+import qualified LambdaCalc.UntypedSpec as ULC
+import Test.HUnit (runTestTT, Test(..))
 
 main :: IO ()
-main = void $ runTestTT tests
+main = void . runTestTT . TestList $
+    [ Arith.tests
+    , ULC.tests
+    ]

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c6852f384917c81eaf9eefed0aae9b066dedc891a2a11a5bf8bef728ca20dc85
+-- hash: f44d7e5370576bf001b0436974cb8734065cf265c916186ebef624c4177d844b
 
 name:           tapl
 version:        0.1.0.0
@@ -27,6 +27,7 @@ source-repository head
 library
   exposed-modules:
       Arithmetic.Interpreter
+      LambdaCalc.Untyped
       Lib
   other-modules:
       Paths_tapl
@@ -43,6 +44,7 @@ test-suite tapl-test
   main-is: Spec.hs
   other-modules:
       Arithmetic.InterpreterSpec
+      LambdaCalc.UntypedSpec
       Paths_tapl
   hs-source-dirs:
       test
