@@ -32,7 +32,7 @@ printTerm ctx (TmLambda var t) =
     let
       (var', ctx') = pickFreshName ctx var
     in
-      "(λ" <> var' <> ". " <> printTerm ctx' t <> ")"
+      "(\\" <> var' <> ". " <> printTerm ctx' t <> ")"
 printTerm ctx (TmVar _ (DeBruijn idx)) = maybe "[bad index]" fst $ at idx ctx
 printTerm ctx (TmApp t1 t2) = "(" <> printTerm ctx t1 <> " " <> printTerm ctx t2 <> ")"
 
@@ -63,7 +63,7 @@ termSub (DeBruijn idx) val target = walk 0 target
   where walk :: Int -> Term -> Term
         walk shft tmvar@(TmVar _ (DeBruijn v)) =
           if v == idx + shft
-            then val
+            then termShift idx val
             else tmvar
         walk shft (TmLambda var t) = TmLambda var $ walk (shft + 1) t
         walk shft (TmApp t1 t2) = TmApp (walk shft t1) (walk shft t2)
@@ -78,10 +78,6 @@ isValue _ _ = False
 data Step a = Continue a
             | Halt a
     deriving stock (Show, Eq, Functor)
-
-extract :: Step a -> a
-extract (Continue a) = a
-extract (Halt a) = a
 
 smallStep :: Context -> Term -> Step Term
 smallStep ctx (TmApp lam@(TmLambda _ body) t)

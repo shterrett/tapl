@@ -55,9 +55,11 @@ ifL :: Term
 ifL = TmLambda "b"
       $ TmLambda "t"
         $ TmLambda "f"
-          $ TmApp (TmApp (TmVar 3 $ DeBruijn 2)
-                         (TmVar 3 $ DeBruijn 1))
-                  (TmVar 3 $ DeBruijn 0)
+          $ TmApp (TmApp (TmApp (TmVar 3 $ DeBruijn 2)
+                            (TmVar 3 $ DeBruijn 1))
+                      (TmVar 3 $ DeBruijn 0)
+                  )
+                  zero
 
 
 evalBoolExprs :: IO ()
@@ -79,10 +81,10 @@ evalBoolExprs = do
       (eval [] $ TmApp (TmApp and true) false)
     assertEqual "if true"
       (Right zero)
-      (eval [] $ TmApp (TmApp (TmApp ifL true) zero) one)
+      (eval [] $ TmApp (TmApp (TmApp ifL true) (TmLambda "_" zero)) (TmLambda "_" one))
     assertEqual "if false"
       (Right one)
-      (eval [] $ TmApp (TmApp (TmApp ifL false) zero) one)
+      (eval [] $ TmApp (TmApp (TmApp ifL false) (TmLambda "_" zero)) (TmLambda "_" one))
 
 pair :: Term
 pair = TmLambda "f"
@@ -199,14 +201,14 @@ evalNumExprs = do
       (Right one)
       (eval [] $ TmApp (TmApp (TmApp ifL
                                      (TmApp (TmApp equalL zero) zero))
-                              one)
-                       two)
+                              (TmLambda "_" one))
+                       (TmLambda "_" two))
     assertEqual "if not equal"
       (Right two)
       (eval [] $ TmApp (TmApp (TmApp ifL
                                      (TmApp (TmApp equalL zero) one))
-                              one)
-                       two)
+                              (TmLambda "_" one))
+                       (TmLambda "_" two))
 
 fix :: Term
 fix = TmLambda "f"
@@ -228,10 +230,11 @@ factorialF :: Term
 factorialF = TmLambda "f"
              $ TmLambda "x"
                (TmApp (TmApp (TmApp ifL (TmApp (TmApp equalL (TmVar 2 $ DeBruijn 0)) zero))
-                              one)
-                      (TmApp (TmApp times (TmVar 2 $ DeBruijn 0))
-                             (TmApp (TmVar 2 $ DeBruijn 1)
-                                    (TmApp predL (TmVar 2 $ DeBruijn 0)))))
+                              (TmLambda "_" $ one))
+                      (TmLambda "_" $
+                        (TmApp (TmApp times (TmVar 2 $ DeBruijn 1))
+                              (TmApp (TmVar 2 $ DeBruijn 2)
+                                      (TmApp predL (TmVar 2 $ DeBruijn 1))))))
 
 factorial :: Term
 factorial = TmApp fix factorialF
