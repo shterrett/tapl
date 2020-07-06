@@ -36,6 +36,10 @@ getTypeFromContext (DeBruijn idx) = do
 data Typ =
     TyFn Typ Typ
     | TyBool
+    | TyString
+    | TyInt
+    | TyPair Typ Typ
+    | TyProduct [(Text, Typ)]
     deriving (Eq, Show)
 
 newtype DeBruijn = DeBruijn { unDeBruijn :: Int }
@@ -48,6 +52,12 @@ data Term =
     | TmTrue
     | TmFalse
     | TmIf Term Term Term
+    | TmStr String
+    | TmInt Int
+    | TmPair Term Term
+    | TmMkProd [(Text, Term)]
+    | TmProjProd Text Term
+    | TmProjUpdate Text Term Term
 
 data TypeLevel = TypeLevel
   { context :: Context
@@ -92,6 +102,29 @@ typeOf (TmIf test true false) = do
       then pure tyTrue
       else throwError $ "TypeError in If: branches must be the same type, but are "
                   <> tshow tyTrue <> " and " <> tshow tyFalse
+typeOf (TmStr _) = pure TyString
+typeOf (TmInt _) = pure TyInt
+typeOf (TmPair l r) = TyPair <$> typeOf l <*> typeOf r
+typeOf (TmMkProd fs) =
+  TyProduct <$> traverse (sequence . fmap typeOf) fs
+typeOf (TmProjProd field record) = do
+  withField field record $ \_ fTyp -> pure fTyp
+typeOf (TmProjUpdate field val record) = do
+  withField field record $ \rTyp fTyp -> do
+    vTyp <- typeOf val
+    if vTyp == fTyp
+      then pure rTyp -- immutable data structure update returns the original datastructure
+      else throwError $ "type mismatch: expected " <> tshow fTyp <> " but got " <> tshow vTyp
+
+withField :: (WithContext m, MonadError Text m) => Text -> Term -> (Typ -> Typ -> m Typ) -> m Typ
+withField field record k = do
+  rTyp <- typeOf record
+  case rTyp of
+    TyProduct fs ->
+      case lookup field fs of
+        Just t -> k (TyProduct fs) t
+        Nothing -> throwError $ "field " <> field <> " not found in type " <> tshow rTyp
+    _ -> throwError $ "Attempted to access " <> field <> " but " <> tshow rTyp <> " is not a product type"
 
 safeIndex :: Int -> [a] -> Maybe a
 safeIndex idx = listToMaybe . drop (idx - 1)
