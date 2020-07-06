@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.31.2.
+-- This file has been generated from package.yaml by hpack version 0.33.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d108e68f5ed497e3d4334c8d30e559aa2e174cb74f53a6098971901bc20f622e
+-- hash: 0a5df48f2a66aa0100703dc2e40d625c7f3cf2a882c8816ce6c8565e91d9168f
 
 name:           tapl
 version:        0.1.0.0
@@ -37,7 +37,9 @@ library
   ghc-options: -Wall
   build-depends:
       base >=4.7 && <5
+    , mtl
     , text
+    , transformers
   default-language: Haskell2010
 
 test-suite tapl-test
@@ -54,6 +56,8 @@ test-suite tapl-test
   build-depends:
       HUnit
     , base >=4.7 && <5
+    , mtl
     , tapl
     , text
+    , transformers
   default-language: Haskell2010
