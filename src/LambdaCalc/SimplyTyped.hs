@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -8,11 +9,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module LambdaCalc.SimplyTyped where
 
-import Control.Monad.Except (ExceptT, MonadError, throwError)
-import Control.Monad.Reader (ReaderT, local, ask)
-import Control.Monad.State (StateT, gets, modify)
+import Control.Monad (foldM)
+import Control.Monad.Except (ExceptT, MonadError, throwError, runExceptT)
+import Control.Monad.Reader (ReaderT, local, ask, runReaderT)
+import Control.Monad.State (StateT, gets, modify, evalStateT)
 import Data.Foldable (for_)
-import Data.Functor.Identity (Identity)
+import Data.Functor.Identity (Identity, runIdentity)
 import Data.List (nub)
 import Data.Maybe (listToMaybe)
 import Data.Text (Text)
@@ -62,15 +64,17 @@ data Term =
     | TmIf Term Term Term
     | TmStr String
     | TmInt Int
+    | TmUnit
     | TmPair Term Term
     | TmMkProd [(Text, Term)]
     | TmProjProd Text Term
-    | TmProjUpdate Text Term Term
+    | TmUpdateProd Text Term Term
     | TmDeclareSum [(Text, Typ)]
     | TmCall Text Term
     -- ^ Right now, used for sum type injection. However, can be used for named
     -- functions with declared types later
     | TmMatchSum Term [(Text, Term)]
+    | TmSequence [Term]
 
 newtype TypeEnv = TypeEnv { getTypeEnv :: [(Text, Typ)] }
   deriving (Show)
@@ -134,12 +138,13 @@ typeOf (TmIf test true false) = do
                   <> tshow tyTrue <> " and " <> tshow tyFalse
 typeOf (TmStr _) = pure TyString
 typeOf (TmInt _) = pure TyInt
+typeOf TmUnit = pure TyUnit
 typeOf (TmPair l r) = TyPair <$> typeOf l <*> typeOf r
 typeOf (TmMkProd fs) =
     TyProduct <$> traverse (sequence . fmap typeOf) fs
 typeOf (TmProjProd field record) = do
     withField field record $ \_ fTyp -> pure fTyp
-typeOf (TmProjUpdate field val record) = do
+typeOf (TmUpdateProd field val record) = do
     withField field record $ \rTyp fTyp -> do
       vTyp <- typeOf val
       if vTyp == fTyp
@@ -174,8 +179,8 @@ typeOf (TmMatchSum term branches) = do
                             <> tshow haveType
                             <> " but got " <> tshow target
       _ -> throwError $ "All branches of a match statement should have the same type, "
-                        <> "but the following types were found"
-                        <> tshow bs
+                        <> "but the following types were found "
+                        <> tshow (snd <$> bs)
     where
       branchTypes ::
         Text -- ^ name of the constructor
@@ -188,16 +193,17 @@ typeOf (TmMatchSum term branches) = do
         case variant of
           TyFn input s@(TySum _) ->
             case result of
-              TyFn input' _ ->
+              TyFn input' output ->
                 if input == input'
-                  then pure (s, result)
-                  else throwError $ " type mismatch: expected match arm to take "
+                  then pure (s, output)
+                  else throwError $ "type mismatch: expected match arm to take "
                                     <> tshow input <> " but actually takes " <> tshow input'
               armErr ->
                 throwError $ "match arm should be function from a variant of the sum type; instead is "
                             <> tshow armErr
           _ -> throwError $ "match arm should be a constructor of a sum type "
                             <> "instead got " <> tshow variant
+typeOf (TmSequence ts) = foldM (const typeOf) TyUnit ts
 
 withField ::
   ( WithContext m
@@ -216,6 +222,14 @@ withField field record k = do
         Just t -> k (TyProduct fs) t
         Nothing -> throwError $ "field " <> field <> " not found in type " <> tshow rTyp
     _ -> throwError $ "Attempted to access " <> field <> " but " <> tshow rTyp <> " is not a product type"
+
+typecheck :: Term -> Either Text Typ
+typecheck =
+  runIdentity
+  . flip runReaderT []
+  . flip evalStateT (TypeEnv [])
+  . runExceptT
+  . (typeOf @TypeChecker)
 
 safeIndex :: Int -> [a] -> Maybe a
 safeIndex idx = listToMaybe . drop (idx - 1)
