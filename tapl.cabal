@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e032e474d02aec78a6df3edb13e31287d7d4c296632f1c093195b144531cccee
+-- hash: 678d5e1fbc8619a81088bffc5386a6495e74a679688b2a1ac0ac810028b3baf4
 
 name:           tapl
 version:        0.1.0.0
@@ -31,6 +31,7 @@ library
       LambdaCalc.Subtyping
       LambdaCalc.Untyped
       Lib
+      SystemF.TypeChecker
   other-modules:
       Paths_tapl
   hs-source-dirs:
@@ -51,6 +52,7 @@ test-suite tapl-test
       LambdaCalc.SimplyTypedSpec
       LambdaCalc.SubtypingSpec
       LambdaCalc.UntypedSpec
+      SystemF.TypeCheckerSpec
       Paths_tapl
   hs-source-dirs:
       test
