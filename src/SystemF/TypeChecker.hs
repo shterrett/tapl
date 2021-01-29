@@ -23,6 +23,7 @@ data Typ =
     | TyAll Text Typ -- variable name
     | TySome Text Typ -- variable name
     | TyBool
+    | TyPair Typ Typ
     deriving (Eq, Show)
 
 data Binding =
@@ -70,6 +71,7 @@ tymap onvar cut tyT = walk cut tyT
     walk c (TyAll name typ) = TyAll name $ walk (succ c) typ
     walk c (TySome name typ) = TySome name $ walk (succ c) typ
     walk _ TyBool = TyBool
+    walk c (TyPair a b) = TyPair (walk c a) (walk c b)
 
 typeShiftAbove :: Int -> Int -> Typ -> Typ
 typeShiftAbove depth =
@@ -104,8 +106,12 @@ data Term =
     | TmPack Typ Term Typ -- forall inside the parens to the left of an arrow
                           -- (real type) (dictionary using real type) (existential type)
     | TmUnpack Text Text Term Term
+  -- Useful things
     | TmTrue
     | TmFalse
+    | TmPair Term Term
+    | TmFst Term
+    | TmSnd Term
 
 -- packing
 -- {*Int, 4} as x
@@ -163,6 +169,15 @@ typeOf (TmUnpack typeName varName bind body) = do
     e -> throwError $ "expected existential, but got " <> tshow e
 typeOf TmTrue = pure TyBool
 typeOf TmFalse = pure TyBool
+typeOf (TmPair l r) = TyPair <$> typeOf l <*> typeOf r
+typeOf (TmFst t) = do
+  typeOf t >>= \case
+    TyPair x _ -> pure x
+    err -> throwError $ "expected pair, but got " <> tshow err
+typeOf (TmSnd t) = do
+  typeOf t >>= \case
+    TyPair _ x -> pure x
+    err -> throwError $ "expected pair, but got " <> tshow err
 
 safeIndex :: Int -> [a] -> Maybe a
 safeIndex idx = listToMaybe . drop (idx - 1)

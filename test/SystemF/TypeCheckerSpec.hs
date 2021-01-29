@@ -7,7 +7,6 @@ module SystemF.TypeCheckerSpec where
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Reader (runReaderT)
 import Data.Functor.Identity (runIdentity)
-import Data.Text (Text)
 import SystemF.TypeChecker
 import Test.HUnit (Test(..), assertEqual)
 
@@ -17,6 +16,7 @@ tests = TestLabel "system f" $ TestList
     , TestLabel "typecheck lambda" $ TestCase lambdas
     , TestLabel "typecheck application" $ TestCase applications
     , TestLabel "forall" $ TestCase foralls
+    , TestLabel "existential" $ TestCase existentials
     ]
 
 variables :: IO ()
@@ -103,19 +103,26 @@ tyConst =
             (TyFn (TyVar $ DeBruijn 0)
                   (TyVar $ DeBruijn 1))
 
--- repl-ing
+existentials :: IO ()
+existentials = do
+  assertEqual "trivial existential"
+    (Right tyExId)
+    (typecheck $ tmExId)
+  assertEqual "unpack existential"
+    (Right TyBool)
+    (typecheck $ TmUnpack "typ" "tm" tmExId $ TmApp (TmSnd $ TmVar $ DeBruijn 0)
+                                                    (TmFst $ TmVar $ DeBruijn 0))
 
-tc ::Term -> Either Text Typ
-tc = typecheck
+tmExId :: Term
+tmExId =
+  TmPack
+    TyBool
+    (TmPair TmTrue (TmLambda "a" TyBool $ (TmVar $ DeBruijn 0)))
+    (TySome "a" $ TyPair (TyVar $ DeBruijn 0) $ TyFn (TyVar $ DeBruijn 0) TyBool)
 
-depthOfTerm :: Term -> Int
-depthOfTerm = \case
-  TmTrue -> 0
-  TmFalse -> 0
-  TmVar _ -> 0
-  TmLambda _ _ tm -> succ $ depthOfTerm tm
-  TmApp fn arg -> max (depthOfTerm fn) (depthOfTerm arg)
-  TmTAbs _ tm -> succ $ depthOfTerm tm
-  TmTApp tm _ -> depthOfTerm tm
-  TmPack _ tm _ -> succ $ depthOfTerm tm
-  TmUnpack _ _ tm1 tm2 -> 2 + max (depthOfTerm tm1) (depthOfTerm tm2)
+tyExId :: Typ
+tyExId =
+    TySome "a"
+      $ TyPair (TyVar $ DeBruijn 0)
+               (TyFn (TyVar $ DeBruijn 0) TyBool)
+
